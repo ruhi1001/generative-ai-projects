@@ -81,9 +81,8 @@ Found a bug? Have an idea? Open an issue or PR!
 
 ## 📬 Connect With Me
 
-- 🐦 Twitter: [@yourhandle](https://twitter.com/yourhandle)
-- 💼 LinkedIn: [Your Name](https://linkedin.com/in/yourname)
-- 📧 Email: your@email.com
+- 💼 LinkedIn: [Ruhi Ahuja](https://linkedin.com/in/ruhi-ahuja-05b541143/)
+- 📧 Email: ruhi.ahuja1001@gmail.com
 
 ---
 
