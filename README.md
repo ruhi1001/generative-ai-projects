@@ -1,3 +1,4 @@
+![Banner](./assets/banner.png)
 # 🚀 Generative AI Projects
 
 > A curated collection of generative AI projects — from autonomous agents to LLM-powered automations.
