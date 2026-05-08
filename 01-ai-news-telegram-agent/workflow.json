@@ -1,0 +1,396 @@
+{
+  "name": "Daily AI News to Telegram (Groq)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "5440dabf-c075-41dc-89a2-035d0bc34204",
+      "name": "Daily 9AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        3136,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=artificial+intelligence+when:1d&hl=en",
+        "options": {}
+      },
+      "id": "b6446ccb-8453-4492-9daa-1e6874a0245f",
+      "name": "Google News AI",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        2336
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://arxiv.org/rss/cs.AI",
+        "options": {}
+      },
+      "id": "55381f40-2cec-4754-ba20-b9718242b912",
+      "name": "ArXiv Papers",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        2496
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://huggingface.co/blog/feed.xml",
+        "options": {}
+      },
+      "id": "8bd4db71-d64f-46f2-b588-e3dcaffeb180",
+      "name": "HuggingFace",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        2640
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://openai.com/blog/rss.xml",
+        "options": {}
+      },
+      "id": "2cf36b22-a8cd-4509-915a-c69031625524",
+      "name": "OpenAI Blog",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        2800
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://hnrss.org/newest?q=AI+OR+LLM",
+        "options": {}
+      },
+      "id": "404cf28d-30cf-478d-b1e2-09378ae736fd",
+      "name": "Hacker News AI",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        2944
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://venturebeat.com/category/ai/feed/",
+        "options": {}
+      },
+      "id": "3ace3fac-b5b5-4c5b-a892-4f49f2609a8a",
+      "name": "VentureBeat AI",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        3088
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nreturn allItems.map(i => ({ json: i.json }));"
+      },
+      "id": "6b0f3469-63a4-43eb-a72a-4c8b476e72bb",
+      "name": "Combine All Feeds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst items = $input.all();\n\nconst filtered = items.filter(item => {\n  const dateStr = item.json.pubDate || item.json.isoDate || item.json.date;\n  if (!dateStr) return true;\n  const pubDate = new Date(dateStr);\n  const hoursDiff = (now - pubDate) / (1000 * 60 * 60);\n  return hoursDiff <= 48;\n});\n\nconst topItems = filtered.slice(0, 25).map(i => ({\n  title: (i.json.title || 'No title').substring(0, 200),\n  link: i.json.link || '',\n  snippet: (i.json.contentSnippet || i.json.description || '').substring(0, 200).replace(/<[^>]*>/g, '')\n}));\n\nreturn [{ json: { items: topItems, count: topItems.length } }];"
+      },
+      "id": "f351a23c-848b-4077-a215-3dd3cd254003",
+      "name": "Filter Last 24h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3936,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.items;\n\nconst prompt = `You are an AI news curator. From the items below, pick the 6 most important AI updates (papers, product launches, major blogs) from the last 48 hours. Format STRICTLY as a Telegram HTML message:\n\n🤖 <b>Daily AI Digest</b>\n\n1. <b>Title here</b>\nOne line summary.\n<a href=\"link\">Read more</a>\n\nKeep total under 3000 characters. Use HTML tags only (<b>, <a>). No markdown, no code blocks.\n\nItems: ${JSON.stringify(items)}`;\n\nreturn [{\n  json: {\n    model: \"llama-3.3-70b-versatile\",\n    messages: [\n      { role: \"user\", content: prompt }\n    ],\n    temperature: 0.7,\n    max_tokens: 2000\n  }\n}];"
+      },
+      "id": "2d54590e-788d-4285-9d03-72469d9561e0",
+      "name": "Build Groq Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4080,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <YOUR_GROQ_API_KEY>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "d18390c2-3132-44f9-a48a-89dc606c6f11",
+      "name": "Groq Summarize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4288,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.choices[0].message.content;\n\nreturn [{\n  json: {\n    chat_id: \"<YOUR_TELEGRAM_CHAT_ID>\",\n    text: text,\n    parse_mode: \"HTML\",\n    disable_web_page_preview: false\n  }\n}];"
+      },
+      "id": "d66fe9ee-b9e8-4ed2-b09a-5c94df53f782",
+      "name": "Build Telegram Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4432,
+        2640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "4cd207ec-c25f-4ca1-8095-4e405b906805",
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4576,
+        2640
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily 9AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google News AI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ArXiv Papers",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HuggingFace",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "OpenAI Blog",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hacker News AI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "VentureBeat AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google News AI": {
+      "main": [
+        [
+          {
+            "node": "Combine All Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ArXiv Papers": {
+      "main": [
+        [
+          {
+            "node": "Combine All Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HuggingFace": {
+      "main": [
+        [
+          {
+            "node": "Combine All Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Blog": {
+      "main": [
+        [
+          {
+            "node": "Combine All Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hacker News AI": {
+      "main": [
+        [
+          {
+            "node": "Combine All Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VentureBeat AI": {
+      "main": [
+        [
+          {
+            "node": "Combine All Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine All Feeds": {
+      "main": [
+        [
+          {
+            "node": "Filter Last 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Last 24h": {
+      "main": [
+        [
+          {
+            "node": "Build Groq Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Groq Request": {
+      "main": [
+        [
+          {
+            "node": "Groq Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Summarize": {
+      "main": [
+        [
+          {
+            "node": "Build Telegram Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Telegram Request": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "087c10bc-f8c9-4230-9739-5392759108cb",
+  "meta": {
+    "instanceId": "0596cfa3b1de6615ff79a3ed15814897cb21f91c90c9d0ca1d9ec18652dab35e"
+  },
+  "id": "7yoZa83qshocKIHB",
+  "tags": []
+}
